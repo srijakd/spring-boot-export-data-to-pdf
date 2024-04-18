@@ -1,5 +1,6 @@
 package com.spring.restapitutorial.controller;
 
+
 import com.spring.restapitutorial.entity.Product;
 import com.spring.restapitutorial.service.IProductService;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -7,6 +8,8 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -15,8 +18,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @Controller
@@ -66,5 +71,30 @@ public class ProductController {
             document.save(byteArrayOutputStream);
             return byteArrayOutputStream.toByteArray();
         }
+    }
+
+    @GetMapping(value = "/products-to-csv", produces = "text/csv")
+    public ResponseEntity<InputStreamResource> exportProductsToCSV() {
+        List<Product> productList = productService.getAllProduct();
+        StringBuilder csvContent = new StringBuilder();
+        csvContent.append("Name,Price,Quantity\n");
+        for (Product product : productList) {
+            csvContent.append(product.getName())
+                    .append(",")
+                    .append(String.valueOf(product.getPrice()))
+                    .append(",")
+                    .append(String.valueOf(product.getQuantity()))
+                    .append("\n");
+        }
+
+        InputStream inputStream = new ByteArrayInputStream(csvContent.toString().getBytes());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=products.csv");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(new InputStreamResource(inputStream));
     }
 }
